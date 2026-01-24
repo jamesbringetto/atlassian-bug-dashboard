@@ -6,7 +6,7 @@ A full-stack analytics platform that transforms Atlassian's public bug data into
 
 ## 🚀 Live Demo
 
-- **Frontend**: [Coming soon]
+- **Frontend**: https://atlassian-bug-dashboard.vercel.app/ 
 - **API Docs**: [Coming soon]
 
 ## ✨ Features
