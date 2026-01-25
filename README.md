@@ -11,7 +11,7 @@ A full-stack analytics platform that transforms Atlassian's public bug data into
 
 ## ✨ Features
 
-- **Real-time Analytics**: 177 bugs synced from Atlassian's public Jira
+- **Real-time Analytics**: Integrated with Atlassian Jira API to sync and visualize open cloud migration bugs with interactive charts and advanced search capabilities
 - **Interactive Charts**: Priority and status distribution visualizations
 - **Searchable Bug List**: Filter by status, priority, or search terms
 - **Paginated Results**: Browse through all bugs efficiently
