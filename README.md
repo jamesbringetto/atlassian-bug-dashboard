@@ -11,11 +11,31 @@ A full-stack analytics platform that transforms Atlassian's public bug data into
 
 ## ✨ Features
 
+- **AI-Powered Triage**: Automatic ticket classification using Claude Haiku - categorizes bugs by type, priority, urgency, and team assignment
 - **Real-time Analytics**: Integrated with Atlassian Jira API to sync and visualize open cloud migration bugs with interactive charts and advanced search capabilities
 - **Interactive Charts**: Priority and status distribution visualizations
 - **Searchable Bug List**: Filter by status, priority, or search terms
 - **Paginated Results**: Browse through all bugs efficiently
 - **Direct Links**: Click any bug to view it on Atlassian's Jira
+
+## 🤖 AI Triage
+
+The dashboard uses Claude Haiku to automatically analyze and triage bug tickets. Each bug is assessed for:
+
+| Field | Description |
+|-------|-------------|
+| **Category** | bug, feature_request, security, performance, documentation, etc. |
+| **Priority** | critical, high, medium, low |
+| **Urgency** | immediate, soon, normal, backlog |
+| **Team** | frontend, backend, infrastructure, security, data, etc. |
+| **Tags** | Auto-generated relevant tags |
+| **Confidence** | AI confidence score (0-100%) |
+| **Reasoning** | Brief explanation of the triage decision |
+
+### Usage
+- **Auto-triage on sync**: New bugs are automatically triaged when syncing from Jira
+- **Manual triage**: Click the "Triage" button on any bug to trigger analysis
+- **Re-triage**: Click any triaged bug row to expand details and re-triage if needed
 
 ## 🛠️ Tech Stack
 
@@ -88,10 +108,19 @@ npm install
 npm run dev
 ```
 
+### Environment Variables
+```bash
+# Required for AI triage (get from console.anthropic.com)
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
 ### Load Data
 ```bash
-# Sync bugs from Atlassian Jira
-curl -X POST "http://localhost:8000/api/bugs/sync?fetch_all=false"
+# Sync bugs from Atlassian Jira (with auto-triage)
+curl -X POST "http://localhost:8000/api/bugs/sync?auto_triage=true"
+
+# Sync without triage
+curl -X POST "http://localhost:8000/api/bugs/sync?auto_triage=false"
 ```
 
 Visit http://localhost:3000 to see the dashboard!
@@ -122,7 +151,9 @@ Visit http://localhost:3000 to see the dashboard!
 | GET | `/api/health` | Health check |
 | GET | `/api/bugs` | List bugs (paginated) |
 | GET | `/api/bugs/{key}` | Get bug details |
-| POST | `/api/bugs/sync` | Sync from Jira |
+| POST | `/api/bugs/sync` | Sync from Jira (with auto-triage) |
+| POST | `/api/bugs/{key}/triage` | Manually triage a bug |
+| GET | `/api/bugs/triage/status` | Triage statistics |
 | GET | `/api/analytics/overview` | Dashboard stats |
 | GET | `/api/analytics/trends` | Trend data |
 
@@ -137,11 +168,12 @@ As a Product Operations leader, I've spent years translating operational signals
 
 ## 🚧 Roadmap
 
-- [ ] Deploy to Vercel/Railway
+- [x] Deploy to Vercel/Railway
+- [x] Add Claude API for AI-powered insights
 - [ ] Add trend charts over time
 - [ ] Implement Prefect for scheduled syncs
-- [ ] Add Claude API for AI-powered insights
 - [ ] Export to Tableau (.hyper files)
+- [ ] Filter bugs by AI triage category/team
 
 ## 👤 Author
 
