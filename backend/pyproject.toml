@@ -19,6 +19,7 @@ python-dotenv = "^1.0.1"
 prefect = "^3.1.11"
 pandas = "^2.2.3"
 alembic = "^1.14.0"
+anthropic = "^0.40.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

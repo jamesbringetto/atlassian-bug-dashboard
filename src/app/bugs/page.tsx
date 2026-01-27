@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBugs } from '@/lib/api';
+import { getBugs, triageBug } from '@/lib/api';
 import Link from 'next/link';
 
 interface Bug {
@@ -14,6 +14,15 @@ interface Bug {
   updated_at: string;
   component: string | null;
   assignee: string | null;
+  // AI Triage fields
+  triage_category: string | null;
+  triage_priority: string | null;
+  triage_urgency: string | null;
+  triage_team: string | null;
+  triage_tags: string[] | null;
+  triage_confidence: number | null;
+  triage_reasoning: string | null;
+  triaged_at: string | null;
 }
 
 export default function BugsPage() {
@@ -25,7 +34,51 @@ export default function BugsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [expandedBug, setExpandedBug] = useState<string | null>(null);
+  const [triaging, setTriaging] = useState<string | null>(null);
   const pageSize = 25;
+
+  const handleTriage = async (jiraKey: string) => {
+    setTriaging(jiraKey);
+    try {
+      await triageBug(jiraKey, true);
+      // Refresh bugs to get updated triage data
+      const response = await getBugs({
+        page,
+        page_size: pageSize,
+        search: searchTerm || undefined,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+      });
+      setBugs(response.data.bugs);
+    } catch (err) {
+      console.error('Triage failed:', err);
+    } finally {
+      setTriaging(null);
+    }
+  };
+
+  const getTriageUrgencyColor = (urgency: string | null) => {
+    if (urgency === 'immediate') return 'bg-red-100 text-red-800 border-red-200';
+    if (urgency === 'soon') return 'bg-orange-100 text-orange-800 border-orange-200';
+    if (urgency === 'normal') return 'bg-blue-100 text-blue-800 border-blue-200';
+    if (urgency === 'backlog') return 'bg-gray-100 text-gray-600 border-gray-200';
+    return 'bg-gray-50 text-gray-500 border-gray-200';
+  };
+
+  const getTriageCategoryIcon = (category: string | null) => {
+    const icons: Record<string, string> = {
+      'bug': '\uD83D\uDC1B',
+      'security': '\uD83D\uDD12',
+      'performance': '\u26A1',
+      'feature_request': '\u2728',
+      'documentation': '\uD83D\uDCDD',
+      'ui_ux': '\uD83C\uDFA8',
+      'data_issue': '\uD83D\uDCCA',
+      'integration': '\uD83D\uDD17',
+    };
+    return icons[category || ''] || '\uD83D\uDD0D';
+  };
 
   useEffect(() => {
     const fetchBugs = async () => {
@@ -124,20 +177,93 @@ export default function BugsPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Summary</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Triage</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {bugs.map((bug) => (
-                    <tr key={bug.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <a href={'https://jira.atlassian.com/browse/' + bug.jira_key} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium">{bug.jira_key}</a>
-                      </td>
-                      <td className="px-6 py-4"><div className="text-sm text-gray-900 max-w-md truncate">{bug.summary}</div></td>
-                      <td className="px-6 py-4"><span className={'px-2 py-1 text-xs font-semibold rounded-full ' + getStatusColor(bug.status)}>{bug.status}</span></td>
-                      <td className="px-6 py-4"><span className={'px-2 py-1 text-xs font-semibold rounded-full ' + getPriorityColor(bug.priority)}>{bug.priority || 'None'}</span></td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(bug.updated_at).toLocaleDateString()}</td>
-                    </tr>
+                    <>
+                      <tr key={bug.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedBug(expandedBug === bug.jira_key ? null : bug.jira_key)}>
+                        <td className="px-6 py-4">
+                          <a href={'https://jira.atlassian.com/browse/' + bug.jira_key} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium" onClick={(e) => e.stopPropagation()}>{bug.jira_key}</a>
+                        </td>
+                        <td className="px-6 py-4"><div className="text-sm text-gray-900 max-w-md truncate">{bug.summary}</div></td>
+                        <td className="px-6 py-4"><span className={'px-2 py-1 text-xs font-semibold rounded-full ' + getStatusColor(bug.status)}>{bug.status}</span></td>
+                        <td className="px-6 py-4"><span className={'px-2 py-1 text-xs font-semibold rounded-full ' + getPriorityColor(bug.priority)}>{bug.priority || 'None'}</span></td>
+                        <td className="px-6 py-4">
+                          {bug.triaged_at ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg" title={bug.triage_category || 'Unknown'}>{getTriageCategoryIcon(bug.triage_category)}</span>
+                              <span className={'px-2 py-1 text-xs font-medium rounded border ' + getTriageUrgencyColor(bug.triage_urgency)}>
+                                {bug.triage_urgency || 'N/A'}
+                              </span>
+                              {bug.triage_team && (
+                                <span className="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 rounded">
+                                  {bug.triage_team}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleTriage(bug.jira_key); }}
+                              disabled={triaging === bug.jira_key}
+                              className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:opacity-50"
+                            >
+                              {triaging === bug.jira_key ? 'Triaging...' : 'Triage'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(bug.updated_at).toLocaleDateString()}</td>
+                      </tr>
+                      {expandedBug === bug.jira_key && bug.triaged_at && (
+                        <tr key={`${bug.id}-expanded`} className="bg-gray-50">
+                          <td colSpan={6} className="px-6 py-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-500">Category:</span>
+                                <p className="text-gray-900 capitalize">{bug.triage_category || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-500">AI Priority:</span>
+                                <p className="text-gray-900 capitalize">{bug.triage_priority || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-500">Team:</span>
+                                <p className="text-gray-900 capitalize">{bug.triage_team || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-500">Confidence:</span>
+                                <p className="text-gray-900">{bug.triage_confidence ? `${Math.round(bug.triage_confidence * 100)}%` : 'N/A'}</p>
+                              </div>
+                              <div className="col-span-2 md:col-span-4">
+                                <span className="font-medium text-gray-500">AI Reasoning:</span>
+                                <p className="text-gray-700 mt-1">{bug.triage_reasoning || 'No reasoning provided'}</p>
+                              </div>
+                              {bug.triage_tags && bug.triage_tags.length > 0 && (
+                                <div className="col-span-2 md:col-span-4">
+                                  <span className="font-medium text-gray-500">Tags:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {bug.triage_tags.map((tag, i) => (
+                                      <span key={i} className="px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">{tag}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="col-span-2 md:col-span-4 flex justify-end">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleTriage(bug.jira_key); }}
+                                  disabled={triaging === bug.jira_key}
+                                  className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:opacity-50"
+                                >
+                                  {triaging === bug.jira_key ? 'Re-triaging...' : 'Re-triage'}
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>

@@ -22,6 +22,15 @@ export interface Bug {
   component: string | null;
   reporter: string | null;
   assignee: string | null;
+  // AI Triage fields
+  triage_category: string | null;
+  triage_priority: string | null;
+  triage_urgency: string | null;
+  triage_team: string | null;
+  triage_tags: string[] | null;
+  triage_confidence: number | null;
+  triage_reasoning: string | null;
+  triaged_at: string | null;
 }
 
 export interface BugStats {
@@ -49,5 +58,12 @@ export const getBugs = (params?: {
 export const getBug = (jiraKey: string) => 
   api.get<Bug>(`/bugs/${jiraKey}`);
 
-export const syncBugs = (fetchAll = false) => 
-  api.post(`/bugs/sync?fetch_all=${fetchAll}`);
+export const syncBugs = (fetchAll = false, autoTriage = true) =>
+  api.post(`/bugs/sync?fetch_all=${fetchAll}&auto_triage=${autoTriage}`);
+
+// Triage endpoints
+export const triageBug = (jiraKey: string, force = false) =>
+  api.post(`/bugs/${jiraKey}/triage?force=${force}`);
+
+export const getTriageStatus = () =>
+  api.get('/bugs/triage/status');

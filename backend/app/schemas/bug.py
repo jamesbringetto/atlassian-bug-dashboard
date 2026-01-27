@@ -6,6 +6,18 @@ from typing import Optional, Any
 from pydantic import BaseModel, ConfigDict
 
 
+class TriageData(BaseModel):
+    """Schema for AI triage data."""
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    urgency: Optional[str] = None
+    team: Optional[str] = None
+    tags: Optional[list[str]] = None
+    confidence: Optional[float] = None
+    reasoning: Optional[str] = None
+    triaged_at: Optional[datetime] = None
+
+
 class BugBase(BaseModel):
     """Base bug schema with common fields."""
     jira_key: str
@@ -49,7 +61,17 @@ class Bug(BugBase):
     updated_at: datetime
     resolved_at: Optional[datetime] = None
     fetched_at: datetime
-    
+
+    # AI Triage fields
+    triage_category: Optional[str] = None
+    triage_priority: Optional[str] = None
+    triage_urgency: Optional[str] = None
+    triage_team: Optional[str] = None
+    triage_tags: Optional[list[str]] = None
+    triage_confidence: Optional[float] = None
+    triage_reasoning: Optional[str] = None
+    triaged_at: Optional[datetime] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
