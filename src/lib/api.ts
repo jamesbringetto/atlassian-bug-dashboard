@@ -41,6 +41,10 @@ export interface BugStats {
   bugs_by_priority: Record<string, number>;
   bugs_by_status: Record<string, number>;
   recent_activity_count: number;
+  // AI Triage aggregations
+  bugs_by_triage_team: Record<string, number>;
+  bugs_by_triage_category: Record<string, number>;
+  triage_coverage: number;
 }
 
 // API functions

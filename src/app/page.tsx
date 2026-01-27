@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getOverviewStats, BugStats } from '@/lib/api';
 import PriorityBarChart from '@/components/charts/PriorityBarChart';
 import StatusBarChart from '@/components/charts/StatusBarChart';
+import TriageTeamChart from '@/components/charts/TriageTeamChart';
+import TriageCategoryChart from '@/components/charts/TriageCategoryChart';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<BugStats | null>(null);
@@ -80,6 +82,26 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Bugs by Status</h2>
             <StatusBarChart data={stats.bugs_by_status} />
+          </div>
+        </div>
+
+        {/* AI Triage Insights Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900">AI Triage Insights</h2>
+            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+              {stats.triage_coverage}% coverage
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-xl font-semibold mb-4">Bugs by AI-Suggested Team</h3>
+              <TriageTeamChart data={stats.bugs_by_triage_team} />
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-xl font-semibold mb-4">Bugs by AI Category</h3>
+              <TriageCategoryChart data={stats.bugs_by_triage_category} />
+            </div>
           </div>
         </div>
 

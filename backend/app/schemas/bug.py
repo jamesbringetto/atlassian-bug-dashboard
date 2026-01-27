@@ -93,6 +93,10 @@ class BugStats(BaseModel):
     bugs_by_priority: dict[str, int]
     bugs_by_status: dict[str, int]
     recent_activity_count: int
+    # AI Triage aggregations
+    bugs_by_triage_team: dict[str, int]
+    bugs_by_triage_category: dict[str, int]
+    triage_coverage: float  # Percentage of bugs that have been triaged
 
 
 class TrendDataPoint(BaseModel):
