@@ -53,6 +53,8 @@ export const getBugs = (params?: {
   status?: string;
   priority?: string;
   search?: string;
+  triage_category?: string;
+  triage_team?: string;
 }) => api.get('/bugs', { params });
 
 export const getBug = (jiraKey: string) => 
@@ -67,3 +69,9 @@ export const triageBug = (jiraKey: string, force = false) =>
 
 export const getTriageStatus = () =>
   api.get('/bugs/triage/status');
+
+export const getTriageCategories = () =>
+  api.get<{ triage_categories: string[] }>('/bugs/triage-categories/list');
+
+export const getTriageTeams = () =>
+  api.get<{ triage_teams: string[] }>('/bugs/triage-teams/list');

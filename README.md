@@ -170,10 +170,10 @@ As a Product Operations leader, I've spent years translating operational signals
 
 - [x] Deploy to Vercel/Railway
 - [x] Add Claude API for AI-powered insights
+- [x] Filter bugs by AI triage category/team
 - [ ] Add trend charts over time
 - [ ] Implement Prefect for scheduled syncs
 - [ ] Export to Tableau (.hyper files)
-- [ ] Filter bugs by AI triage category/team
 
 ## 👤 Author
 

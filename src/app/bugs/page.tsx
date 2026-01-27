@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBugs, triageBug } from '@/lib/api';
+import { getBugs, triageBug, getTriageCategories, getTriageTeams } from '@/lib/api';
 import Link from 'next/link';
 
 interface Bug {
@@ -34,6 +34,10 @@ export default function BugsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [triageCategoryFilter, setTriageCategoryFilter] = useState('');
+  const [triageTeamFilter, setTriageTeamFilter] = useState('');
+  const [triageCategories, setTriageCategories] = useState<string[]>([]);
+  const [triageTeams, setTriageTeams] = useState<string[]>([]);
   const [expandedBug, setExpandedBug] = useState<string | null>(null);
   const [triaging, setTriaging] = useState<string | null>(null);
   const pageSize = 25;
@@ -49,6 +53,8 @@ export default function BugsPage() {
         search: searchTerm || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
+        triage_category: triageCategoryFilter || undefined,
+        triage_team: triageTeamFilter || undefined,
       });
       setBugs(response.data.bugs);
     } catch (err) {
@@ -81,6 +87,22 @@ export default function BugsPage() {
   };
 
   useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const [categoriesRes, teamsRes] = await Promise.all([
+          getTriageCategories(),
+          getTriageTeams(),
+        ]);
+        setTriageCategories(categoriesRes.data.triage_categories);
+        setTriageTeams(teamsRes.data.triage_teams);
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    };
+    fetchFilterOptions();
+  }, []);
+
+  useEffect(() => {
     const fetchBugs = async () => {
       setLoading(true);
       try {
@@ -90,6 +112,8 @@ export default function BugsPage() {
           search: searchTerm || undefined,
           status: statusFilter || undefined,
           priority: priorityFilter || undefined,
+          triage_category: triageCategoryFilter || undefined,
+          triage_team: triageTeamFilter || undefined,
         });
         setBugs(response.data.bugs);
         setTotal(response.data.total);
@@ -101,7 +125,7 @@ export default function BugsPage() {
       }
     };
     fetchBugs();
-  }, [page, searchTerm, statusFilter, priorityFilter]);
+  }, [page, searchTerm, statusFilter, priorityFilter, triageCategoryFilter, triageTeamFilter]);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -131,7 +155,7 @@ export default function BugsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <input
@@ -158,6 +182,24 @@ export default function BugsPage() {
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
                 <option value="Low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">AI Category</label>
+              <select value={triageCategoryFilter} onChange={(e) => { setTriageCategoryFilter(e.target.value); setPage(1); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">All Categories</option>
+                {triageCategories.map((category) => (
+                  <option key={category} value={category}>{category.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">AI Team</label>
+              <select value={triageTeamFilter} onChange={(e) => { setTriageTeamFilter(e.target.value); setPage(1); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">All Teams</option>
+                {triageTeams.map((team) => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
               </select>
             </div>
           </div>

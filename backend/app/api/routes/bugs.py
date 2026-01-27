@@ -24,25 +24,29 @@ def list_bugs(
     status: Optional[str] = Query(None, description="Filter by status"),
     priority: Optional[str] = Query(None, description="Filter by priority"),
     search: Optional[str] = Query(None, description="Search in summary"),
+    triage_category: Optional[str] = Query(None, description="Filter by AI triage category"),
+    triage_team: Optional[str] = Query(None, description="Filter by AI triage team"),
     db: Session = Depends(get_db)
 ):
     """
     List bugs with pagination and filtering.
-    
+
     Args:
         page: Page number (starts at 1)
         page_size: Number of bugs per page
         status: Filter by status (optional)
         priority: Filter by priority (optional)
         search: Search term for summary (optional)
+        triage_category: AI triage category filter (optional)
+        triage_team: AI triage team filter (optional)
         db: Database session
-    
+
     Returns:
         Paginated list of bugs
     """
     # Build query
     query = db.query(BugModel)
-    
+
     # Apply filters
     if status:
         query = query.filter(BugModel.status == status)
@@ -50,6 +54,10 @@ def list_bugs(
         query = query.filter(BugModel.priority == priority)
     if search:
         query = query.filter(BugModel.summary.ilike(f"%{search}%"))
+    if triage_category:
+        query = query.filter(BugModel.triage_category == triage_category)
+    if triage_team:
+        query = query.filter(BugModel.triage_team == triage_team)
     
     # Get total count
     total = query.count()
@@ -205,6 +213,20 @@ def list_priorities(db: Session = Depends(get_db)):
     """Get list of all unique priorities."""
     priorities = db.query(BugModel.priority).distinct().all()
     return {"priorities": [p[0] for p in priorities if p[0]]}
+
+
+@router.get("/bugs/triage-categories/list")
+def list_triage_categories(db: Session = Depends(get_db)):
+    """Get list of all unique AI triage categories."""
+    categories = db.query(BugModel.triage_category).distinct().all()
+    return {"triage_categories": [c[0] for c in categories if c[0]]}
+
+
+@router.get("/bugs/triage-teams/list")
+def list_triage_teams(db: Session = Depends(get_db)):
+    """Get list of all unique AI triage teams."""
+    teams = db.query(BugModel.triage_team).distinct().all()
+    return {"triage_teams": [t[0] for t in teams if t[0]]}
 
 
 @router.post("/bugs/{jira_key}/triage")
