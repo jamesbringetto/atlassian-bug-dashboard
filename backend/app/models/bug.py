@@ -81,3 +81,28 @@ class Bug(Base):
 # Indexes for common queries
 Index("idx_bugs_status_priority", Bug.status, Bug.priority)
 Index("idx_bugs_created_updated", Bug.created_at, Bug.updated_at)
+
+
+class SyncLog(Base):
+    """Track sync operations for monitoring and debugging."""
+
+    __tablename__ = "sync_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sync_type = Column(String(50), nullable=False)  # "full", "incremental"
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False, default="running")  # running, success, failed
+
+    # Results
+    bugs_fetched = Column(Integer, default=0)
+    bugs_created = Column(Integer, default=0)
+    bugs_updated = Column(Integer, default=0)
+    bugs_triaged = Column(Integer, default=0)
+    triage_errors = Column(Integer, default=0)
+
+    # Error tracking
+    error_message = Column(Text, nullable=True)
+
+    def __repr__(self):
+        return f"<SyncLog {self.id}: {self.sync_type} - {self.status}>"
