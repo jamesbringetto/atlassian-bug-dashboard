@@ -106,3 +106,50 @@ class SyncLog(Base):
 
     def __repr__(self):
         return f"<SyncLog {self.id}: {self.sync_type} - {self.status}>"
+
+
+class Commit(Base):
+    """GitHub commit with linked Jira keys."""
+
+    __tablename__ = "commits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sha = Column(String(40), unique=True, nullable=False, index=True)
+    short_sha = Column(String(7), nullable=False)
+    message = Column(Text, nullable=False)
+    message_headline = Column(String(200), nullable=False)
+
+    # Author info
+    author_name = Column(String(200), nullable=True)
+    author_email = Column(String(200), nullable=True)
+    authored_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
+    # GitHub link
+    url = Column(String(500), nullable=True)
+
+    # Linked Jira keys (stored as array for quick access)
+    jira_keys = Column(ARRAY(String), nullable=True)
+
+    # Metadata
+    fetched_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<Commit {self.short_sha}: {self.message_headline[:50]}>"
+
+
+class CommitBugLink(Base):
+    """Many-to-many link between commits and bugs."""
+
+    __tablename__ = "commit_bug_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    commit_id = Column(Integer, nullable=False, index=True)
+    bug_id = Column(Integer, nullable=False, index=True)
+    jira_key = Column(String(50), nullable=False, index=True)
+
+    # When this link was created
+    linked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+# Index for efficient lookups
+Index("idx_commit_bug_links_commit_bug", CommitBugLink.commit_id, CommitBugLink.bug_id, unique=True)
