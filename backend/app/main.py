@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import bugs, analytics, health
+from app.api.routes import bugs, analytics, health, github
 
 # Configure logging
 logging.basicConfig(
@@ -53,6 +53,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(bugs.router, prefix="/api", tags=["bugs"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(github.router, prefix="/api", tags=["github"])
 
 
 @app.get("/")

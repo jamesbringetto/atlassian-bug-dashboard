@@ -26,7 +26,12 @@ class Settings(BaseSettings):
     # Anthropic (Claude API for auto-triage)
     ANTHROPIC_API_KEY: str = ""
     TRIAGE_ENABLED: bool = True  # Enable/disable auto-triage on sync
-    
+
+    # GitHub
+    GITHUB_TOKEN: str = ""
+    GITHUB_REPO_OWNER: str = "jamesbringetto"
+    GITHUB_REPO_NAME: str = "atlassian-bug-dashboard"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
