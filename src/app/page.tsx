@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getOverviewStats, BugStats } from '@/lib/api';
+import { getOverviewStats, getCommits, BugStats, Commit } from '@/lib/api';
 import PriorityBarChart from '@/components/charts/PriorityBarChart';
 import StatusBarChart from '@/components/charts/StatusBarChart';
 import TriageTeamChart from '@/components/charts/TriageTeamChart';
@@ -10,14 +10,21 @@ import TriageCategoryChart from '@/components/charts/TriageCategoryChart';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<BugStats | null>(null);
+  const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getOverviewStats();
-        setStats(response.data);
+        const [statsResponse, commitsResponse] = await Promise.all([
+          getOverviewStats(),
+          getCommits({ page: 1, page_size: 5 }).catch(() => null)
+        ]);
+        setStats(statsResponse.data);
+        if (commitsResponse) {
+          setCommits(commitsResponse.data.commits);
+        }
       } catch (err) {
         setError('Failed to load statistics');
         console.error(err);
@@ -26,7 +33,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchStats();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -162,6 +169,70 @@ export default function Dashboard() {
             {stats.recent_activity_count} bugs updated in the last 7 days
           </p>
         </div>
+
+        {/* Recent Commits Section */}
+        {commits.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Recent Commits</h2>
+              <Link
+                href="/commits"
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                View all commits →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {commits.map((commit) => (
+                <div key={commit.sha} className="border-b border-gray-100 pb-3 last:border-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={commit.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 font-mono text-sm"
+                      >
+                        {commit.short_sha}
+                      </a>
+                      <span className="mx-2 text-gray-300">·</span>
+                      <span className="text-gray-900 text-sm truncate">{commit.message_headline}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-gray-500 text-xs">{commit.author_name}</span>
+                    {commit.authored_at && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-gray-500 text-xs">
+                          {new Date(commit.authored_at).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
+                    {commit.jira_keys.length > 0 && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <div className="flex gap-1">
+                          {commit.jira_keys.map((key) => (
+                            <a
+                              key={key}
+                              href={`https://jira.atlassian.com/browse/${key}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                            >
+                              {key}
+                            </a>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
