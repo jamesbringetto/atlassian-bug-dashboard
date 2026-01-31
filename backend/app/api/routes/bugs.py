@@ -91,7 +91,7 @@ def get_bug(jira_key: str, db: Session = Depends(get_db)):
 
 @router.post("/bugs/sync")
 def sync_bugs(
-    fetch_all: bool = Query(False, description="Fetch all bugs or just open ones"),
+    fetch_all: bool = Query(True, description="Fetch all bugs including closed ones"),
     auto_triage: bool = Query(True, description="Auto-triage new bugs with Claude AI"),
     db: Session = Depends(get_db)
 ):
