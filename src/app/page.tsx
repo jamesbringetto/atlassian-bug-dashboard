@@ -56,9 +56,28 @@ export default function Dashboard() {
             Real-time analytics and AI-powered triage for Atlassian cloud migration bugs
           </p>
           <p className="text-gray-500 text-sm mt-1">
-            Tracking {stats.total_bugs} bugs
+            Tracking {stats.total_bugs} bugs · Updated daily · Last refresh: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
-          <Link 
+          <div className="flex items-center gap-4 mt-3 text-sm">
+            <a
+              href="https://www.linkedin.com/in/jamesbringetto/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Built by James Bringetto · Connect on LinkedIn
+            </a>
+            <span className="text-gray-300">|</span>
+            <a
+              href="https://github.com/jamesbringetto/atlassian-bug-dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800 hover:underline"
+            >
+              View on GitHub
+            </a>
+          </div>
+          <Link
             href="/bugs"
             className="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
