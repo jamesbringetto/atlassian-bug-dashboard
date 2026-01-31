@@ -50,7 +50,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
-            Atlassian Bug Intelligence Dashboard
+            Atlassian Cloud Migration Bug Intelligence Dashboard
           </h1>
           <p className="text-gray-600 mt-2">
             Real-time analytics from {stats.total_bugs} bugs

@@ -1,4 +1,4 @@
-# Atlassian Bug Intelligence Dashboard
+# Atlassian Cloud Migration Bug Intelligence Dashboard
 
 A full-stack analytics platform that transforms Atlassian's public bug data into actionable insights. Built in a weekend to demonstrate modern full-stack development with real-world data.
 
