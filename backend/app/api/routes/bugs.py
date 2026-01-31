@@ -93,6 +93,7 @@ def get_bug(jira_key: str, db: Session = Depends(get_db)):
 def sync_bugs(
     fetch_all: bool = Query(True, description="Fetch all bugs including closed ones"),
     auto_triage: bool = Query(True, description="Auto-triage new bugs with Claude AI"),
+    triage_limit: int = Query(20, ge=0, le=100, description="Max bugs to triage per sync (0 = unlimited)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -107,6 +108,7 @@ def sync_bugs(
     Args:
         fetch_all: If True, fetch all bugs. If False, only fetch open bugs.
         auto_triage: If True, automatically triage new/untriaged bugs.
+        triage_limit: Maximum number of bugs to triage per sync (default 20, 0 = unlimited).
         db: Database session
 
     Returns:
@@ -151,9 +153,14 @@ def sync_bugs(
         # Auto-triage bugs if enabled and service is available
         triaged_count = 0
         triage_errors = 0
+        triage_skipped = 0
 
         if auto_triage and settings.TRIAGE_ENABLED and triage_service.is_available():
             for bug in bugs_to_triage:
+                # Stop if we've reached the triage limit (0 = unlimited)
+                if triage_limit > 0 and triaged_count >= triage_limit:
+                    triage_skipped = len(bugs_to_triage) - triaged_count - triage_errors
+                    break
                 try:
                     result = triage_service.triage_bug(
                         summary=bug.summary,
@@ -185,7 +192,8 @@ def sync_bugs(
             "updated": updated_count,
             "triaged": triaged_count,
             "triage_errors": triage_errors,
-            "message": f"Synced {len(raw_bugs)} bugs from Jira, triaged {triaged_count} bugs"
+            "triage_skipped": triage_skipped,
+            "message": f"Synced {len(raw_bugs)} bugs from Jira, triaged {triaged_count} bugs" + (f" ({triage_skipped} skipped due to limit)" if triage_skipped > 0 else "")
         }
 
     except Exception as e:
