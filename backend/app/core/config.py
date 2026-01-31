@@ -1,5 +1,5 @@
 """
-Core configuration for the Atlassian Bug Dashboard API.
+Core configuration for the Atlassian Cloud Migration Bug Dashboard API.
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

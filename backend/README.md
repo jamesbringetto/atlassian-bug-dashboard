@@ -1,6 +1,6 @@
 # Backend API
 
-FastAPI backend for Atlassian Bug Dashboard.
+FastAPI backend for Atlassian Cloud Migration Bug Dashboard.
 
 ## Setup
 
