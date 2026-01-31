@@ -12,8 +12,9 @@ A full-stack analytics platform that transforms Atlassian's public bug data into
 ## ✨ Features
 
 - **AI-Powered Triage**: Automatic ticket classification using Claude Haiku - categorizes bugs by type, priority, urgency, and team assignment
-- **Real-time Analytics**: Integrated with Atlassian Jira API to sync and visualize open cloud migration bugs with interactive charts and advanced search capabilities
-- **Interactive Charts**: Priority and status distribution visualizations
+- **Real-time Analytics**: Integrated with Atlassian Jira API to sync and visualize all cloud migration bugs (open and closed) with interactive charts and advanced search capabilities
+- **Interactive Charts**: Priority, status, triage team, and category distribution visualizations
+- **Triage Coverage Tracking**: See what percentage of bugs have been triaged with live coverage metrics
 - **Searchable Bug List**: Filter by status, priority, or search terms
 - **Paginated Results**: Browse through all bugs efficiently
 - **Direct Links**: Click any bug to view it on Atlassian's Jira
@@ -66,6 +67,11 @@ The dashboard uses Claude Haiku to automatically analyze and triage bug tickets.
 - Priority distribution chart
 - Status distribution chart
 
+### AI Triage Insights
+- Triage coverage percentage badge
+- Team distribution chart (frontend, backend, infrastructure, etc.)
+- Category distribution chart (bug, feature_request, security, etc.)
+
 ### Bug List
 - Searchable by summary
 - Filterable by status and priority
@@ -116,11 +122,14 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ### Load Data
 ```bash
-# Sync bugs from Atlassian Jira (with auto-triage)
+# Sync all bugs from Atlassian Jira (with auto-triage)
 curl -X POST "http://localhost:8000/api/bugs/sync?auto_triage=true"
 
 # Sync without triage
 curl -X POST "http://localhost:8000/api/bugs/sync?auto_triage=false"
+
+# Sync only open bugs
+curl -X POST "http://localhost:8000/api/bugs/sync?fetch_all=false"
 ```
 
 Visit http://localhost:3000 to see the dashboard!
@@ -141,6 +150,10 @@ Visit http://localhost:3000 to see the dashboard!
 │   │   ├── page.tsx         # Dashboard
 │   │   └── bugs/page.tsx    # Bug list
 │   ├── components/charts/   # Chart components
+│   │   ├── PriorityChart.tsx
+│   │   ├── StatusChart.tsx
+│   │   ├── TriageTeamChart.tsx
+│   │   └── TriageCategoryChart.tsx
 │   └── lib/api.ts           # API client
 ```
 
@@ -154,7 +167,7 @@ Visit http://localhost:3000 to see the dashboard!
 | POST | `/api/bugs/sync` | Sync from Jira (with auto-triage) |
 | POST | `/api/bugs/{key}/triage` | Manually triage a bug |
 | GET | `/api/bugs/triage/status` | Triage statistics |
-| GET | `/api/analytics/overview` | Dashboard stats |
+| GET | `/api/analytics/overview` | Dashboard stats (includes triage coverage, team & category distribution) |
 | GET | `/api/analytics/trends` | Trend data |
 
 ## 🎯 Why I Built This
@@ -170,6 +183,7 @@ As a Product Operations leader, I've spent years translating operational signals
 
 - [x] Deploy to Vercel/Railway
 - [x] Add Claude API for AI-powered insights
+- [x] Add AI triage insight charts (team & category distribution)
 - [ ] Add trend charts over time
 - [ ] Implement Prefect for scheduled syncs
 - [ ] Export to Tableau (.hyper files)
