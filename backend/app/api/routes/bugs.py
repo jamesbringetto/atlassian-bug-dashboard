@@ -301,6 +301,84 @@ def triage_bug(
     }
 
 
+@router.post("/bugs/triage/batch")
+def batch_triage_bugs(
+    limit: int = Query(20, ge=1, le=100, description="Max bugs to triage"),
+    db: Session = Depends(get_db)
+):
+    """
+    Triage untriaged bugs already in the database (no Jira fetch).
+
+    This is much faster than sync with auto_triage since it skips
+    the Jira API calls entirely.
+
+    Args:
+        limit: Maximum number of bugs to triage (default 20, max 100)
+        db: Database session
+
+    Returns:
+        Triage results summary
+    """
+    # Check if triage service is available
+    if not triage_service.is_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Triage service unavailable. Check ANTHROPIC_API_KEY configuration."
+        )
+
+    # Get untriaged bugs from database
+    untriaged_bugs = db.query(BugModel).filter(
+        BugModel.triaged_at.is_(None)
+    ).limit(limit).all()
+
+    if not untriaged_bugs:
+        return {
+            "status": "success",
+            "triaged": 0,
+            "errors": 0,
+            "remaining": 0,
+            "message": "No untriaged bugs found"
+        }
+
+    triaged_count = 0
+    error_count = 0
+
+    for bug in untriaged_bugs:
+        try:
+            result = triage_service.triage_bug(
+                summary=bug.summary,
+                description=bug.description,
+                current_priority=bug.priority,
+                component=bug.component,
+                labels=bug.labels
+            )
+            if result:
+                bug.triage_category = result.category
+                bug.triage_priority = result.priority_recommendation
+                bug.triage_urgency = result.urgency
+                bug.triage_team = result.suggested_team
+                bug.triage_tags = result.tags
+                bug.triage_confidence = result.confidence
+                bug.triage_reasoning = result.reasoning
+                bug.triaged_at = datetime.now(timezone.utc)
+                triaged_count += 1
+        except Exception:
+            error_count += 1
+
+    db.commit()
+
+    # Count remaining untriaged
+    remaining = db.query(BugModel).filter(BugModel.triaged_at.is_(None)).count()
+
+    return {
+        "status": "success",
+        "triaged": triaged_count,
+        "errors": error_count,
+        "remaining": remaining,
+        "message": f"Triaged {triaged_count} bugs, {remaining} remaining"
+    }
+
+
 @router.get("/bugs/triage/status")
 def get_triage_status(db: Session = Depends(get_db)):
     """
