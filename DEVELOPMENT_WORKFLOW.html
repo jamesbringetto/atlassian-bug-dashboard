@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlassian Bug Dashboard - Development Workflow</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    h1 {
+      color: #1a1a2e;
+      border-bottom: 3px solid #4361ee;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #4361ee;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    h3 {
+      color: #555;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    .step {
+      background: #f8f9fa;
+      border-left: 4px solid #4361ee;
+      padding: 15px 20px;
+      margin: 15px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .step-number {
+      display: inline-block;
+      background: #4361ee;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .step-title {
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+    code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #1a1a2e;
+      color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-size: 0.85em;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .tip {
+      background: #d1e7dd;
+      border-left: 4px solid #198754;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      border: 1px solid #dee2e6;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: #4361ee;
+      color: white;
+    }
+    tr:nth-child(even) { background: #f8f9fa; }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      padding: 8px 0;
+      padding-left: 30px;
+      position: relative;
+    }
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      font-size: 1.2em;
+    }
+    .section-divider {
+      border: none;
+      border-top: 2px dashed #dee2e6;
+      margin: 40px 0;
+    }
+    @media print {
+      body { padding: 20px; }
+      .step, .warning, .tip { break-inside: avoid; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Atlassian Bug Dashboard<br><small style="font-weight: normal; font-size: 0.5em; color: #666;">Development Workflow Guide</small></h1>
+
+  <h2>Project Structure</h2>
+  <table>
+    <tr>
+      <th>Component</th>
+      <th>Technology</th>
+      <th>Hosting</th>
+      <th>Local Port</th>
+    </tr>
+    <tr>
+      <td>Frontend</td>
+      <td>Next.js / React</td>
+      <td>Vercel</td>
+      <td>3000</td>
+    </tr>
+    <tr>
+      <td>Backend</td>
+      <td>FastAPI / Python</td>
+      <td>Railway</td>
+      <td>8000</td>
+    </tr>
+    <tr>
+      <td>Database</td>
+      <td>PostgreSQL</td>
+      <td>Railway</td>
+      <td>-</td>
+    </tr>
+  </table>
+
+  <hr class="section-divider">
+
+  <h2>Development Workflow</h2>
+
+  <div class="step">
+    <span class="step-number">1</span>
+    <span class="step-title">Start Local Development Servers</span>
+    <p style="margin-top: 10px;"><strong>Terminal 1 - Backend:</strong></p>
+    <pre><code>cd ~/path/to/atlassian-bug-dashboard/backend
+poetry run uvicorn app.main:app --reload --port 8000</code></pre>
+    <p><strong>Terminal 2 - Frontend:</strong></p>
+    <pre><code>cd ~/path/to/atlassian-bug-dashboard
+npm run dev</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-number">2</span>
+    <span class="step-title">Point Frontend to Local Backend (Optional)</span>
+    <p style="margin-top: 10px;">Edit <code>src/lib/api.ts</code>:</p>
+    <pre><code>// Change this for local testing:
+const API_BASE_URL = 'http://localhost:8000/api';
+
+// Production URL (restore before committing):
+const API_BASE_URL = 'https://atlassian-bug-dashboard-production.up.railway.app/api';</code></pre>
+  </div>
+
+  <div class="warning">
+    <strong>Remember:</strong> Always restore the production API URL before committing!
+  </div>
+
+  <div class="step">
+    <span class="step-number">3</span>
+    <span class="step-title">Test Your Changes Locally</span>
+    <table>
+      <tr>
+        <th>What</th>
+        <th>URL</th>
+      </tr>
+      <tr>
+        <td>Frontend Dashboard</td>
+        <td><code>http://localhost:3000</code></td>
+      </tr>
+      <tr>
+        <td>Backend API Docs</td>
+        <td><code>http://localhost:8000/docs</code></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="step">
+    <span class="step-number">4</span>
+    <span class="step-title">Create Feature Branch & Commit</span>
+    <pre><code># Create a new branch
+git checkout -b feature/my-new-feature
+
+# Stage your changes
+git add src/app/page.tsx src/lib/api.ts
+
+# Commit with descriptive message
+git commit -m "Add new feature description"
+
+# Push to remote
+git push -u origin feature/my-new-feature</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-number">5</span>
+    <span class="step-title">Create Pull Request</span>
+    <pre><code># Interactive PR creation
+gh pr create
+
+# Or with title/body inline
+gh pr create --title "Add feature X" --body "Description of changes"</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-number">6</span>
+    <span class="step-title">Merge & Deploy</span>
+    <pre><code># Merge the PR (triggers auto-deploy)
+gh pr merge --merge</code></pre>
+    <p style="margin-top: 10px;">Vercel and Railway will automatically redeploy when main is updated.</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <h2>Quick Reference Commands</h2>
+
+  <h3>Development</h3>
+  <table>
+    <tr><th>Task</th><th>Command</th></tr>
+    <tr><td>Start frontend</td><td><code>npm run dev</code></td></tr>
+    <tr><td>Start backend</td><td><code>poetry run uvicorn app.main:app --reload</code></td></tr>
+    <tr><td>Build frontend</td><td><code>npm run build</code></td></tr>
+    <tr><td>Run frontend tests</td><td><code>npm test</code></td></tr>
+    <tr><td>Run backend tests</td><td><code>poetry run pytest</code></td></tr>
+    <tr><td>Install frontend deps</td><td><code>npm install</code></td></tr>
+    <tr><td>Install backend deps</td><td><code>poetry install</code></td></tr>
+  </table>
+
+  <h3>Git & GitHub</h3>
+  <table>
+    <tr><th>Task</th><th>Command</th></tr>
+    <tr><td>Check status</td><td><code>git status</code></td></tr>
+    <tr><td>Create branch</td><td><code>git checkout -b feature/name</code></td></tr>
+    <tr><td>Switch to main</td><td><code>git checkout main</code></td></tr>
+    <tr><td>Pull latest</td><td><code>git pull origin main</code></td></tr>
+    <tr><td>View PRs</td><td><code>gh pr list</code></td></tr>
+    <tr><td>View PR status</td><td><code>gh pr status</code></td></tr>
+    <tr><td>Merge PR</td><td><code>gh pr merge</code></td></tr>
+  </table>
+
+  <h3>Deployment</h3>
+  <table>
+    <tr><th>Task</th><th>Command</th></tr>
+    <tr><td>Force Vercel redeploy</td><td><code>vercel --prod</code></td></tr>
+    <tr><td>Force Railway redeploy</td><td><code>railway up</code></td></tr>
+    <tr><td>Check Vercel status</td><td><code>vercel ls</code></td></tr>
+  </table>
+
+  <hr class="section-divider">
+
+  <h2>Pre-Commit Checklist</h2>
+  <ul class="checklist">
+    <li>API URL is set to production (not localhost)</li>
+    <li>No console.log() statements left in code</li>
+    <li>Frontend builds without errors: <code>npm run build</code></li>
+    <li>Changes tested locally</li>
+    <li>Commit message is descriptive</li>
+  </ul>
+
+  <hr class="section-divider">
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Dashboard shows "Application error"</h3>
+  <div class="tip">
+    Check browser console for errors. Usually means frontend/backend are out of sync.
+    Make sure both are deployed with latest changes.
+  </div>
+
+  <h3>Changes not appearing after deploy</h3>
+  <div class="tip">
+    <ul style="margin-left: 20px;">
+      <li>Clear browser cache (Cmd+Shift+R)</li>
+      <li>Check Vercel/Railway dashboards for deploy status</li>
+      <li>Force redeploy: <code>vercel --prod</code> or <code>railway up</code></li>
+    </ul>
+  </div>
+
+  <h3>gh CLI not working</h3>
+  <div class="tip">
+    Run <code>gh auth login</code> and authenticate via browser.
+    Make sure token has <code>repo</code> and <code>read:org</code> scopes.
+  </div>
+
+  <hr class="section-divider">
+
+  <h2>Key URLs</h2>
+  <table>
+    <tr><th>Resource</th><th>URL</th></tr>
+    <tr><td>Production Dashboard</td><td>atlassian-bug-dashboard.vercel.app</td></tr>
+    <tr><td>Production API</td><td>atlassian-bug-dashboard-production.up.railway.app/api</td></tr>
+    <tr><td>GitHub Repo</td><td>github.com/jamesbringetto/atlassian-bug-dashboard</td></tr>
+    <tr><td>Vercel Dashboard</td><td>vercel.com/dashboard</td></tr>
+    <tr><td>Railway Dashboard</td><td>railway.app/dashboard</td></tr>
+  </table>
+
+  <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #dee2e6; color: #666; font-size: 0.9em;">
+    <p>Generated for Atlassian Bug Dashboard project</p>
+  </div>
+
+</body>
+</html>
