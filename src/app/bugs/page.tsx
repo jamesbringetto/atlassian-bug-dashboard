@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBugs, triageBug } from '@/lib/api';
+import { getBugs, triageBug, getBugCommits, Commit } from '@/lib/api';
 import Link from 'next/link';
 
 interface Bug {
@@ -36,7 +36,23 @@ export default function BugsPage() {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [expandedBug, setExpandedBug] = useState<string | null>(null);
   const [triaging, setTriaging] = useState<string | null>(null);
+  const [bugCommits, setBugCommits] = useState<Record<string, Commit[]>>({});
+  const [loadingCommits, setLoadingCommits] = useState<string | null>(null);
   const pageSize = 25;
+
+  const loadBugCommits = async (jiraKey: string) => {
+    if (bugCommits[jiraKey]) return; // Already loaded
+    setLoadingCommits(jiraKey);
+    try {
+      const response = await getBugCommits(jiraKey);
+      setBugCommits(prev => ({ ...prev, [jiraKey]: response.data.commits }));
+    } catch (err) {
+      console.error('Failed to load commits:', err);
+      setBugCommits(prev => ({ ...prev, [jiraKey]: [] }));
+    } finally {
+      setLoadingCommits(null);
+    }
+  };
 
   const handleTriage = async (jiraKey: string) => {
     setTriaging(jiraKey);
@@ -184,7 +200,11 @@ export default function BugsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {bugs.map((bug) => (
                     <>
-                      <tr key={bug.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedBug(expandedBug === bug.jira_key ? null : bug.jira_key)}>
+                      <tr key={bug.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => {
+                        const newExpandedKey = expandedBug === bug.jira_key ? null : bug.jira_key;
+                        setExpandedBug(newExpandedKey);
+                        if (newExpandedKey) loadBugCommits(newExpandedKey);
+                      }}>
                         <td className="px-6 py-4">
                           <a href={'https://jira.atlassian.com/browse/' + bug.jira_key} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium" onClick={(e) => e.stopPropagation()}>{bug.jira_key}</a>
                         </td>
@@ -216,49 +236,84 @@ export default function BugsPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">{new Date(bug.updated_at).toLocaleDateString()}</td>
                       </tr>
-                      {expandedBug === bug.jira_key && bug.triaged_at && (
+                      {expandedBug === bug.jira_key && (
                         <tr key={`${bug.id}-expanded`} className="bg-gray-50">
                           <td colSpan={6} className="px-6 py-4">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-500">Category:</span>
-                                <p className="text-gray-900 capitalize">{bug.triage_category || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-500">AI Priority:</span>
-                                <p className="text-gray-900 capitalize">{bug.triage_priority || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-500">Team:</span>
-                                <p className="text-gray-900 capitalize">{bug.triage_team || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-500">Confidence:</span>
-                                <p className="text-gray-900">{bug.triage_confidence ? `${Math.round(bug.triage_confidence * 100)}%` : 'N/A'}</p>
-                              </div>
-                              <div className="col-span-2 md:col-span-4">
-                                <span className="font-medium text-gray-500">AI Reasoning:</span>
-                                <p className="text-gray-700 mt-1">{bug.triage_reasoning || 'No reasoning provided'}</p>
-                              </div>
-                              {bug.triage_tags && bug.triage_tags.length > 0 && (
-                                <div className="col-span-2 md:col-span-4">
-                                  <span className="font-medium text-gray-500">Tags:</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {bug.triage_tags.map((tag, i) => (
-                                      <span key={i} className="px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">{tag}</span>
-                                    ))}
-                                  </div>
+                            {/* AI Triage Section */}
+                            {bug.triaged_at && (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                                <div>
+                                  <span className="font-medium text-gray-500">Category:</span>
+                                  <p className="text-gray-900 capitalize">{bug.triage_category || 'N/A'}</p>
                                 </div>
-                              )}
-                              <div className="col-span-2 md:col-span-4 flex justify-end">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleTriage(bug.jira_key); }}
-                                  disabled={triaging === bug.jira_key}
-                                  className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:opacity-50"
-                                >
-                                  {triaging === bug.jira_key ? 'Re-triaging...' : 'Re-triage'}
-                                </button>
+                                <div>
+                                  <span className="font-medium text-gray-500">AI Priority:</span>
+                                  <p className="text-gray-900 capitalize">{bug.triage_priority || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-500">Team:</span>
+                                  <p className="text-gray-900 capitalize">{bug.triage_team || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-500">Confidence:</span>
+                                  <p className="text-gray-900">{bug.triage_confidence ? `${Math.round(bug.triage_confidence * 100)}%` : 'N/A'}</p>
+                                </div>
+                                <div className="col-span-2 md:col-span-4">
+                                  <span className="font-medium text-gray-500">AI Reasoning:</span>
+                                  <p className="text-gray-700 mt-1">{bug.triage_reasoning || 'No reasoning provided'}</p>
+                                </div>
+                                {bug.triage_tags && bug.triage_tags.length > 0 && (
+                                  <div className="col-span-2 md:col-span-4">
+                                    <span className="font-medium text-gray-500">Tags:</span>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {bug.triage_tags.map((tag, i) => (
+                                        <span key={i} className="px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">{tag}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
+                            )}
+
+                            {/* Linked Commits Section */}
+                            <div className="border-t border-gray-200 pt-4 mt-2">
+                              <span className="font-medium text-gray-500 text-sm">Linked Commits:</span>
+                              {loadingCommits === bug.jira_key ? (
+                                <p className="text-gray-500 text-sm mt-1">Loading commits...</p>
+                              ) : bugCommits[bug.jira_key]?.length > 0 ? (
+                                <div className="mt-2 space-y-2">
+                                  {bugCommits[bug.jira_key].map((commit) => (
+                                    <div key={commit.sha} className="flex items-start gap-2 text-sm">
+                                      <a
+                                        href={commit.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 font-mono shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {commit.short_sha}
+                                      </a>
+                                      <span className="text-gray-900">{commit.message_headline}</span>
+                                      <span className="text-gray-400 shrink-0">
+                                        {commit.authored_at && new Date(commit.authored_at).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-400 text-sm mt-1">No commits linked to this bug</p>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-end mt-4 pt-2 border-t border-gray-200">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleTriage(bug.jira_key); }}
+                                disabled={triaging === bug.jira_key}
+                                className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:opacity-50"
+                              >
+                                {triaging === bug.jira_key ? (bug.triaged_at ? 'Re-triaging...' : 'Triaging...') : (bug.triaged_at ? 'Re-triage' : 'Triage')}
+                              </button>
                             </div>
                           </td>
                         </tr>

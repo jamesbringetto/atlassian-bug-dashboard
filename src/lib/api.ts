@@ -71,3 +71,50 @@ export const triageBug = (jiraKey: string, force = false) =>
 
 export const getTriageStatus = () =>
   api.get('/bugs/triage/status');
+
+// GitHub/Commit types
+export interface Commit {
+  id: number;
+  sha: string;
+  short_sha: string;
+  message_headline: string;
+  message?: string;
+  author_name: string;
+  authored_at: string | null;
+  url: string;
+  jira_keys: string[];
+}
+
+export interface GitHubStatus {
+  available: boolean;
+  repository: string;
+  statistics: {
+    total_commits: number;
+    commits_with_jira_keys: number;
+    total_links: number;
+    bugs_with_commits: number;
+  };
+}
+
+// GitHub API functions
+export const getCommits = (params?: {
+  page?: number;
+  page_size?: number;
+  jira_key?: string;
+}) => api.get<{
+  commits: Commit[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}>('/github/commits', { params });
+
+export const getBugCommits = (jiraKey: string) =>
+  api.get<{
+    jira_key: string;
+    commit_count: number;
+    commits: Commit[];
+  }>(`/bugs/${jiraKey}/commits`);
+
+export const getGitHubStatus = () =>
+  api.get<GitHubStatus>('/github/status');
