@@ -30,16 +30,18 @@ class JiraClient:
         self,
         max_results: int = 100,
         start_at: int = 0,
-        status_filter: Optional[str] = None
+        status_filter: Optional[str] = None,
+        updated_since: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Search for bugs in the Jira project.
-        
+
         Args:
             max_results: Maximum number of results to return
             start_at: Starting index for pagination
             status_filter: Optional status filter (e.g., "!Done" for non-done items)
-        
+            updated_since: Optional JQL date filter (e.g., "-1d", "-24h", "2024-01-01")
+
         Returns:
             Dictionary with 'issues', 'total', and 'maxResults' keys
         """
@@ -48,10 +50,13 @@ class JiraClient:
             f"project={self.project}",
             f"type={self.issue_type}"
         ]
-        
+
         if status_filter:
             jql_parts.append(f"statusCategory{status_filter}")
-        
+
+        if updated_since:
+            jql_parts.append(f"updated >= {updated_since}")
+
         jql = " AND ".join(jql_parts) + " ORDER BY updated DESC"
         
         # API endpoint
@@ -115,7 +120,48 @@ class JiraClient:
                 break
         
         return all_bugs
-    
+
+    def get_recently_updated_bugs(
+        self, hours: int = 24, batch_size: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch bugs updated within the last N hours.
+
+        Args:
+            hours: Number of hours to look back (default 24)
+            batch_size: Number of bugs to fetch per request
+
+        Returns:
+            List of bug dictionaries
+        """
+        all_bugs = []
+        start_at = 0
+        updated_since = f"-{hours}h"
+
+        while True:
+            response = self.search_bugs(
+                max_results=batch_size,
+                start_at=start_at,
+                status_filter=None,  # Get all statuses
+                updated_since=updated_since
+            )
+
+            issues = response.get("issues", [])
+            if not issues:
+                break
+
+            all_bugs.extend(issues)
+
+            total = response.get("total", 0)
+            start_at += len(issues)
+
+            logger.info(f"Progress: {len(all_bugs)}/{total} recently updated bugs fetched")
+
+            if len(all_bugs) >= total:
+                break
+
+        return all_bugs
+
     def parse_bug(self, issue: Dict[str, Any]) -> Dict[str, Any]:
         """
         Parse a Jira issue into our bug format.

@@ -9,7 +9,7 @@ from sqlalchemy import func, desc
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.bug import Bug as BugModel
+from app.models.bug import Bug as BugModel, SyncLog
 from app.schemas.bug import Bug, BugList, BugCreate
 from app.services.jira_client import jira_client
 from app.services.triage_service import triage_service
@@ -424,4 +424,175 @@ def get_triage_status(db: Session = Depends(get_db)):
         },
         "by_category": category_counts,
         "by_team": team_counts
+    }
+
+
+@router.post("/bugs/sync/incremental")
+def incremental_sync(
+    hours: int = Query(24, ge=1, le=168, description="Hours to look back for updates"),
+    triage_batch_size: int = Query(20, ge=1, le=100, description="Bugs to triage per batch"),
+    db: Session = Depends(get_db)
+):
+    """
+    Incremental sync - fetch only recently updated bugs and triage them.
+
+    This endpoint is designed for scheduled daily runs:
+    1. Fetches bugs updated in the last N hours from Jira
+    2. Creates new bugs or updates existing ones
+    3. Re-triages updated bugs (clears old triage data)
+    4. Triages all new/updated bugs in batches
+
+    Args:
+        hours: How many hours back to look for updates (default 24)
+        triage_batch_size: How many bugs to triage per batch (default 20)
+        db: Database session
+
+    Returns:
+        Sync results summary
+    """
+    # Create sync log
+    sync_log = SyncLog(sync_type="incremental", status="running")
+    db.add(sync_log)
+    db.commit()
+
+    try:
+        # Fetch recently updated bugs from Jira
+        raw_bugs = jira_client.get_recently_updated_bugs(hours=hours)
+        sync_log.bugs_fetched = len(raw_bugs)
+
+        # Process bugs
+        created_count = 0
+        updated_count = 0
+        bugs_to_triage = []
+
+        for raw_bug in raw_bugs:
+            bug_data = jira_client.parse_bug(raw_bug)
+
+            existing_bug = db.query(BugModel).filter(
+                BugModel.jira_key == bug_data["jira_key"]
+            ).first()
+
+            if existing_bug:
+                # Check if the bug was actually updated (compare updated_at)
+                if bug_data["updated_at"] and existing_bug.updated_at:
+                    if bug_data["updated_at"] > existing_bug.updated_at:
+                        # Update existing bug
+                        for key, value in bug_data.items():
+                            setattr(existing_bug, key, value)
+                        # Clear triage data for re-triage
+                        existing_bug.triage_category = None
+                        existing_bug.triage_priority = None
+                        existing_bug.triage_urgency = None
+                        existing_bug.triage_team = None
+                        existing_bug.triage_tags = None
+                        existing_bug.triage_confidence = None
+                        existing_bug.triage_reasoning = None
+                        existing_bug.triaged_at = None
+                        updated_count += 1
+                        bugs_to_triage.append(existing_bug)
+            else:
+                # Create new bug
+                new_bug = BugModel(**bug_data)
+                db.add(new_bug)
+                db.flush()
+                created_count += 1
+                bugs_to_triage.append(new_bug)
+
+        db.commit()
+        sync_log.bugs_created = created_count
+        sync_log.bugs_updated = updated_count
+
+        # Triage all new/updated bugs in batches
+        triaged_count = 0
+        triage_errors = 0
+
+        if settings.TRIAGE_ENABLED and triage_service.is_available() and bugs_to_triage:
+            for i, bug in enumerate(bugs_to_triage):
+                try:
+                    result = triage_service.triage_bug(
+                        summary=bug.summary,
+                        description=bug.description,
+                        current_priority=bug.priority,
+                        component=bug.component,
+                        labels=bug.labels
+                    )
+                    if result:
+                        bug.triage_category = result.category
+                        bug.triage_priority = result.priority_recommendation
+                        bug.triage_urgency = result.urgency
+                        bug.triage_team = result.suggested_team
+                        bug.triage_tags = result.tags
+                        bug.triage_confidence = result.confidence
+                        bug.triage_reasoning = result.reasoning
+                        bug.triaged_at = datetime.now(timezone.utc)
+                        triaged_count += 1
+
+                    # Commit in batches to avoid timeout
+                    if (i + 1) % triage_batch_size == 0:
+                        db.commit()
+
+                except Exception:
+                    triage_errors += 1
+
+            db.commit()
+
+        # Update sync log
+        sync_log.bugs_triaged = triaged_count
+        sync_log.triage_errors = triage_errors
+        sync_log.status = "success"
+        sync_log.completed_at = datetime.now(timezone.utc)
+        db.commit()
+
+        return {
+            "status": "success",
+            "sync_id": sync_log.id,
+            "hours_back": hours,
+            "bugs_fetched": len(raw_bugs),
+            "bugs_created": created_count,
+            "bugs_updated": updated_count,
+            "bugs_triaged": triaged_count,
+            "triage_errors": triage_errors,
+            "message": f"Incremental sync complete: {created_count} new, {updated_count} updated, {triaged_count} triaged"
+        }
+
+    except Exception as e:
+        db.rollback()
+        sync_log.status = "failed"
+        sync_log.error_message = str(e)
+        sync_log.completed_at = datetime.now(timezone.utc)
+        db.add(sync_log)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Incremental sync failed: {str(e)}")
+
+
+@router.get("/bugs/sync/history")
+def get_sync_history(
+    limit: int = Query(10, ge=1, le=100, description="Number of records to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get recent sync history.
+
+    Returns:
+        List of recent sync operations
+    """
+    logs = db.query(SyncLog).order_by(desc(SyncLog.started_at)).limit(limit).all()
+
+    return {
+        "sync_history": [
+            {
+                "id": log.id,
+                "sync_type": log.sync_type,
+                "status": log.status,
+                "started_at": log.started_at.isoformat() if log.started_at else None,
+                "completed_at": log.completed_at.isoformat() if log.completed_at else None,
+                "bugs_fetched": log.bugs_fetched,
+                "bugs_created": log.bugs_created,
+                "bugs_updated": log.bugs_updated,
+                "bugs_triaged": log.bugs_triaged,
+                "triage_errors": log.triage_errors,
+                "error_message": log.error_message
+            }
+            for log in logs
+        ]
     }
