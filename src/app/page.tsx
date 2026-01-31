@@ -53,7 +53,10 @@ export default function Dashboard() {
             Atlassian Cloud Migration Bug Intelligence Dashboard
           </h1>
           <p className="text-gray-600 mt-2">
-            Real-time analytics from {stats.total_bugs} bugs
+            Real-time analytics and AI-powered triage for Atlassian cloud migration bugs
+          </p>
+          <p className="text-gray-500 text-sm mt-1">
+            Tracking {stats.total_bugs} bugs
           </p>
           <Link 
             href="/bugs"
