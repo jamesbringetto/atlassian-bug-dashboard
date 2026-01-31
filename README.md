@@ -201,4 +201,3 @@ MIT License - feel free to use this as inspiration for your own projects!
 
 ---
 
-Built with ☕ and Claude in a weekend.
