@@ -38,6 +38,8 @@ export interface BugStats {
   open_bugs: number;
   closed_bugs: number;
   avg_resolution_time_days: number | null;
+  p50_resolution_time_days: number | null;
+  p90_resolution_time_days: number | null;
   bugs_by_priority: Record<string, number>;
   bugs_by_status: Record<string, number>;
   recent_activity_count: number;

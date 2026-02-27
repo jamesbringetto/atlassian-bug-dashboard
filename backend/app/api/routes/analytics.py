@@ -3,6 +3,7 @@ Analytics endpoints for dashboard metrics.
 """
 from datetime import datetime, timedelta
 from typing import Optional
+import math
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -13,6 +14,21 @@ from app.models.bug import Bug as BugModel
 from app.schemas.bug import BugStats, BugTrends, TrendDataPoint
 
 router = APIRouter()
+
+
+def _percentile(sorted_data: list[float], percentile: int) -> Optional[float]:
+    """Calculate the given percentile from a sorted list using linear interpolation."""
+    if not sorted_data:
+        return None
+    n = len(sorted_data)
+    idx = (percentile / 100) * (n - 1)
+    lower = math.floor(idx)
+    upper = math.ceil(idx)
+    if lower == upper:
+        return round(sorted_data[lower], 1)
+    fraction = idx - lower
+    value = sorted_data[lower] + fraction * (sorted_data[upper] - sorted_data[lower])
+    return round(value, 1)
 
 
 @router.get("/analytics/overview", response_model=BugStats)
@@ -45,6 +61,17 @@ def get_overview_stats(db: Session = Depends(get_db)):
     ).filter(
         BugModel.resolved_at.isnot(None)
     ).scalar()
+
+    # P50 and P90 resolution time percentiles (in days)
+    resolution_rows = db.query(
+        func.extract('epoch', BugModel.resolved_at - BugModel.created_at) / 86400
+    ).filter(
+        BugModel.resolved_at.isnot(None)
+    ).all()
+
+    resolution_days_sorted = sorted(row[0] for row in resolution_rows if row[0] is not None)
+    p50_resolution = _percentile(resolution_days_sorted, 50)
+    p90_resolution = _percentile(resolution_days_sorted, 90)
     
     # Bugs by priority
     priority_counts = db.query(
@@ -111,6 +138,8 @@ def get_overview_stats(db: Session = Depends(get_db)):
         open_bugs=open_bugs,
         closed_bugs=closed_bugs,
         avg_resolution_time_days=round(avg_resolution, 1) if avg_resolution else None,
+        p50_resolution_time_days=p50_resolution,
+        p90_resolution_time_days=p90_resolution,
         bugs_by_priority=bugs_by_priority,
         bugs_by_status=bugs_by_status,
         recent_activity_count=recent_activity,
