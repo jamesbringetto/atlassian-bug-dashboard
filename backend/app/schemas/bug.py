@@ -90,6 +90,8 @@ class BugStats(BaseModel):
     open_bugs: int
     closed_bugs: int
     avg_resolution_time_days: Optional[float] = None
+    p50_resolution_time_days: Optional[float] = None
+    p90_resolution_time_days: Optional[float] = None
     bugs_by_priority: dict[str, int]
     bugs_by_status: dict[str, int]
     recent_activity_count: int

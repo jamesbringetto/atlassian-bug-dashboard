@@ -92,14 +92,24 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard title="Total Bugs" value={stats.total_bugs} color="blue" />
           <StatCard title="Open Bugs" value={stats.open_bugs} color="yellow" />
           <StatCard title="Closed Bugs" value={stats.closed_bugs} color="green" />
-          <StatCard 
-            title="Avg Resolution Time" 
-            value={stats.avg_resolution_time_days ? `${stats.avg_resolution_time_days} days` : 'N/A'} 
-            color="purple" 
+          <StatCard
+            title="Avg Resolution Time"
+            value={stats.avg_resolution_time_days ? `${stats.avg_resolution_time_days} days` : 'N/A'}
+            color="purple"
+          />
+          <StatCard
+            title="P50 Resolution Time"
+            value={stats.p50_resolution_time_days != null ? `${stats.p50_resolution_time_days} days` : 'N/A'}
+            color="indigo"
+          />
+          <StatCard
+            title="P90 Resolution Time"
+            value={stats.p90_resolution_time_days != null ? `${stats.p90_resolution_time_days} days` : 'N/A'}
+            color="rose"
           />
         </div>
 
@@ -238,12 +248,14 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ title, value, color }: { title: string; value: string | number; color: 'blue' | 'yellow' | 'green' | 'purple' }) {
+function StatCard({ title, value, color }: { title: string; value: string | number; color: 'blue' | 'yellow' | 'green' | 'purple' | 'indigo' | 'rose' }) {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-700 border-blue-200',
     yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     green: 'bg-green-50 text-green-700 border-green-200',
     purple: 'bg-purple-50 text-purple-700 border-purple-200',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200',
   };
 
   return (
