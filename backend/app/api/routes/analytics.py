@@ -1,11 +1,12 @@
 """
 Analytics endpoints for dashboard metrics.
 """
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 import math
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, and_, extract
 
@@ -13,6 +14,7 @@ from app.core.database import get_db
 from app.models.bug import Bug as BugModel
 from app.schemas.bug import BugStats, BugTrends, TrendDataPoint
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -35,7 +37,7 @@ def _percentile(sorted_data: list[float], percentile: int) -> Optional[float]:
 def get_overview_stats(db: Session = Depends(get_db)):
     """
     Get overview statistics for the dashboard.
-    
+
     Returns:
         - Total bugs
         - Open vs closed bugs
@@ -44,8 +46,9 @@ def get_overview_stats(db: Session = Depends(get_db)):
         - Bugs by status
         - Recent activity count
     """
-    # Total bugs
-    total_bugs = db.query(func.count(BugModel.id)).scalar()
+    try:
+        # Total bugs
+        total_bugs = db.query(func.count(BugModel.id)).scalar() or 0
     
     # Open vs closed bugs
     open_bugs = db.query(func.count(BugModel.id)).filter(
@@ -133,20 +136,23 @@ def get_overview_stats(db: Session = Depends(get_db)):
     ).scalar()
     triage_coverage = round((triaged_count / total_bugs * 100), 1) if total_bugs > 0 else 0
 
-    return BugStats(
-        total_bugs=total_bugs,
-        open_bugs=open_bugs,
-        closed_bugs=closed_bugs,
-        avg_resolution_time_days=round(avg_resolution, 1) if avg_resolution else None,
-        p50_resolution_time_days=p50_resolution,
-        p90_resolution_time_days=p90_resolution,
-        bugs_by_priority=bugs_by_priority,
-        bugs_by_status=bugs_by_status,
-        recent_activity_count=recent_activity,
-        bugs_by_triage_team=bugs_by_triage_team,
-        bugs_by_triage_category=bugs_by_triage_category,
-        triage_coverage=triage_coverage
-    )
+        return BugStats(
+            total_bugs=total_bugs,
+            open_bugs=open_bugs,
+            closed_bugs=closed_bugs,
+            avg_resolution_time_days=round(avg_resolution, 1) if avg_resolution else None,
+            p50_resolution_time_days=p50_resolution,
+            p90_resolution_time_days=p90_resolution,
+            bugs_by_priority=bugs_by_priority,
+            bugs_by_status=bugs_by_status,
+            recent_activity_count=recent_activity,
+            bugs_by_triage_team=bugs_by_triage_team,
+            bugs_by_triage_category=bugs_by_triage_category,
+            triage_coverage=triage_coverage
+        )
+    except Exception as e:
+        logger.error(f"Error fetching overview stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch overview stats: {str(e)}")
 
 
 @router.get("/analytics/trends", response_model=BugTrends)
@@ -165,8 +171,16 @@ def get_bug_trends(
         - Daily resolved bugs
         - Status distribution over time
     """
+    try:
+        return _get_bug_trends(db, days)
+    except Exception as e:
+        logger.error(f"Error fetching bug trends: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch bug trends: {str(e)}")
+
+
+def _get_bug_trends(db: Session, days: int) -> BugTrends:
     start_date = datetime.utcnow() - timedelta(days=days)
-    
+
     # Daily created bugs
     created_trends = db.query(
         func.date(BugModel.created_at).label('date'),
@@ -217,10 +231,10 @@ def get_bug_trends(
     ).all()
     
     status_over_time = [
-        TrendDataPoint(date=str(week.date()), count=count, category=status)
+        TrendDataPoint(date=str(week.date()) if week else "unknown", count=count, category=status)
         for week, status, count in status_trends
     ]
-    
+
     return BugTrends(
         daily_created=daily_created,
         daily_resolved=daily_resolved,
@@ -238,6 +252,14 @@ def get_resolution_times(db: Session = Depends(get_db)):
         - Average by priority
         - Fastest/slowest resolutions
     """
+    try:
+        return _get_resolution_times(db)
+    except Exception as e:
+        logger.error(f"Error fetching resolution times: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch resolution times: {str(e)}")
+
+
+def _get_resolution_times(db: Session):
     # Resolution time distribution
     resolution_data = db.query(
         BugModel.jira_key,
