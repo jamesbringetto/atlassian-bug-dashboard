@@ -42,7 +42,15 @@ class Settings(BaseSettings):
     @property
     def origins_list(self) -> list[str]:
         """Convert comma-separated origins to list."""
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        if "*" in origins:
+            return []
+        return origins
+
+    @property
+    def allow_all_origins(self) -> bool:
+        """Check if wildcard origin is configured."""
+        return "*" in self.ALLOWED_ORIGINS
 
 
 # Global settings instance
