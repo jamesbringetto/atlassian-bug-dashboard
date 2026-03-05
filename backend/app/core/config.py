@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,https://atlassian-bug-dashboard.vercel.app"
+    ALLOWED_ORIGIN_REGEX: str = r"https://atlassian-bug-dashboard.*\.vercel\.app"
 
     # Anthropic (Claude API for auto-triage)
     ANTHROPIC_API_KEY: str = ""
