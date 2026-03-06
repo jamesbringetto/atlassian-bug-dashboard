@@ -72,7 +72,7 @@ def get_overview_stats(db: Session = Depends(get_db)):
             BugModel.resolved_at.isnot(None)
         ).all()
 
-        resolution_days_sorted = sorted(row[0] for row in resolution_rows if row[0] is not None)
+        resolution_days_sorted = sorted(float(row[0]) for row in resolution_rows if row[0] is not None)
         p50_resolution = _percentile(resolution_days_sorted, 50)
         p90_resolution = _percentile(resolution_days_sorted, 90)
 
@@ -140,7 +140,7 @@ def get_overview_stats(db: Session = Depends(get_db)):
             total_bugs=total_bugs,
             open_bugs=open_bugs,
             closed_bugs=closed_bugs,
-            avg_resolution_time_days=round(avg_resolution, 1) if avg_resolution else None,
+            avg_resolution_time_days=round(float(avg_resolution), 1) if avg_resolution else None,
             p50_resolution_time_days=p50_resolution,
             p90_resolution_time_days=p90_resolution,
             bugs_by_priority=bugs_by_priority,
@@ -274,7 +274,7 @@ def _get_resolution_times(db: Session):
         {
             "jira_key": key,
             "priority": priority,
-            "days": round(seconds / 86400, 1) if seconds else 0
+            "days": round(float(seconds) / 86400, 1) if seconds else 0
         }
         for key, priority, seconds in resolution_data
     ]
@@ -292,7 +292,7 @@ def _get_resolution_times(db: Session):
     ).all()
     
     priority_averages = {
-        priority or "None": round(avg_days, 1)
+        priority or "None": round(float(avg_days), 1)
         for priority, avg_days in avg_by_priority if avg_days
     }
     
