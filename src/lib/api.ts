@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://atlassian-bug-dashboard-production.up.railway.app/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://atlassian-bug-dashboard-production.up.railway.app/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
