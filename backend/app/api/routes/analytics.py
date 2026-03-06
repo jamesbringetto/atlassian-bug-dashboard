@@ -49,92 +49,92 @@ def get_overview_stats(db: Session = Depends(get_db)):
     try:
         # Total bugs
         total_bugs = db.query(func.count(BugModel.id)).scalar() or 0
-    
-    # Open vs closed bugs
-    open_bugs = db.query(func.count(BugModel.id)).filter(
-        BugModel.status_category != "Done"
-    ).scalar()
-    closed_bugs = total_bugs - open_bugs
-    
-    # Average resolution time (in days)
-    avg_resolution = db.query(
-        func.avg(
+
+        # Open vs closed bugs
+        open_bugs = db.query(func.count(BugModel.id)).filter(
+            BugModel.status_category != "Done"
+        ).scalar()
+        closed_bugs = total_bugs - open_bugs
+
+        # Average resolution time (in days)
+        avg_resolution = db.query(
+            func.avg(
+                func.extract('epoch', BugModel.resolved_at - BugModel.created_at) / 86400
+            )
+        ).filter(
+            BugModel.resolved_at.isnot(None)
+        ).scalar()
+
+        # P50 and P90 resolution time percentiles (in days)
+        resolution_rows = db.query(
             func.extract('epoch', BugModel.resolved_at - BugModel.created_at) / 86400
-        )
-    ).filter(
-        BugModel.resolved_at.isnot(None)
-    ).scalar()
+        ).filter(
+            BugModel.resolved_at.isnot(None)
+        ).all()
 
-    # P50 and P90 resolution time percentiles (in days)
-    resolution_rows = db.query(
-        func.extract('epoch', BugModel.resolved_at - BugModel.created_at) / 86400
-    ).filter(
-        BugModel.resolved_at.isnot(None)
-    ).all()
+        resolution_days_sorted = sorted(row[0] for row in resolution_rows if row[0] is not None)
+        p50_resolution = _percentile(resolution_days_sorted, 50)
+        p90_resolution = _percentile(resolution_days_sorted, 90)
 
-    resolution_days_sorted = sorted(row[0] for row in resolution_rows if row[0] is not None)
-    p50_resolution = _percentile(resolution_days_sorted, 50)
-    p90_resolution = _percentile(resolution_days_sorted, 90)
-    
-    # Bugs by priority
-    priority_counts = db.query(
-        BugModel.priority,
-        func.count(BugModel.id)
-    ).group_by(BugModel.priority).all()
-    
-    bugs_by_priority = {
-        priority or "None": count 
-        for priority, count in priority_counts
-    }
-    
-    # Bugs by status
-    status_counts = db.query(
-        BugModel.status,
-        func.count(BugModel.id)
-    ).group_by(BugModel.status).all()
-    
-    bugs_by_status = {
-        status: count 
-        for status, count in status_counts
-    }
-    
-    # Recent activity (last 7 days)
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    recent_activity = db.query(func.count(BugModel.id)).filter(
-        BugModel.updated_at >= seven_days_ago
-    ).scalar()
+        # Bugs by priority
+        priority_counts = db.query(
+            BugModel.priority,
+            func.count(BugModel.id)
+        ).group_by(BugModel.priority).all()
 
-    # AI Triage aggregations - Bugs by suggested team
-    team_counts = db.query(
-        BugModel.triage_team,
-        func.count(BugModel.id)
-    ).filter(
-        BugModel.triage_team.isnot(None)
-    ).group_by(BugModel.triage_team).all()
+        bugs_by_priority = {
+            priority or "None": count
+            for priority, count in priority_counts
+        }
 
-    bugs_by_triage_team = {
-        team: count
-        for team, count in team_counts
-    }
+        # Bugs by status
+        status_counts = db.query(
+            BugModel.status,
+            func.count(BugModel.id)
+        ).group_by(BugModel.status).all()
 
-    # AI Triage aggregations - Bugs by category
-    category_counts = db.query(
-        BugModel.triage_category,
-        func.count(BugModel.id)
-    ).filter(
-        BugModel.triage_category.isnot(None)
-    ).group_by(BugModel.triage_category).all()
+        bugs_by_status = {
+            status: count
+            for status, count in status_counts
+        }
 
-    bugs_by_triage_category = {
-        category: count
-        for category, count in category_counts
-    }
+        # Recent activity (last 7 days)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        recent_activity = db.query(func.count(BugModel.id)).filter(
+            BugModel.updated_at >= seven_days_ago
+        ).scalar()
 
-    # Triage coverage - percentage of bugs that have been triaged
-    triaged_count = db.query(func.count(BugModel.id)).filter(
-        BugModel.triaged_at.isnot(None)
-    ).scalar()
-    triage_coverage = round((triaged_count / total_bugs * 100), 1) if total_bugs > 0 else 0
+        # AI Triage aggregations - Bugs by suggested team
+        team_counts = db.query(
+            BugModel.triage_team,
+            func.count(BugModel.id)
+        ).filter(
+            BugModel.triage_team.isnot(None)
+        ).group_by(BugModel.triage_team).all()
+
+        bugs_by_triage_team = {
+            team: count
+            for team, count in team_counts
+        }
+
+        # AI Triage aggregations - Bugs by category
+        category_counts = db.query(
+            BugModel.triage_category,
+            func.count(BugModel.id)
+        ).filter(
+            BugModel.triage_category.isnot(None)
+        ).group_by(BugModel.triage_category).all()
+
+        bugs_by_triage_category = {
+            category: count
+            for category, count in category_counts
+        }
+
+        # Triage coverage - percentage of bugs that have been triaged
+        triaged_count = db.query(func.count(BugModel.id)).filter(
+            BugModel.triaged_at.isnot(None)
+        ).scalar()
+        triage_coverage = round((triaged_count / total_bugs * 100), 1) if total_bugs > 0 else 0
 
         return BugStats(
             total_bugs=total_bugs,
